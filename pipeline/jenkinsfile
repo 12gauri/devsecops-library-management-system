@@ -8,6 +8,8 @@ pipeline {
     environment {
         IMAGE_NAME = "library-devsecops-app"
         CONTAINER_NAME = "library-test-container"
+        // This resolves the exact installation path of your global tool
+        SCANNER_HOME = tool type: 'hudson.plugins.sonar.SonarRunnerInstallation', name: 'sonar-scanner'
     }
 
     stages {
@@ -23,16 +25,13 @@ pipeline {
         }
 
         stage('SonarQube Scan') {
-            tools {
-                // Changed from sonarQubeScanner to sonarRunner
-                sonarRunner 'sonar-scanner'
-            }
             steps {
                 echo "Running SonarQube Analysis..."
 
                 withSonarQubeEnv('SonarQube') {
+                    // We run the scanner directly using its resolved bin path
                     sh """
-                        sonar-scanner \
+                        ${SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectKey=library-app \
                         -Dsonar.projectName=Library-App \
                         -Dsonar.sources=.
