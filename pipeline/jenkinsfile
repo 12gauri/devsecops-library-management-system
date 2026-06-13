@@ -12,15 +12,10 @@ pipeline {
         SONAR_HOST_URL = "http://sonarqube:9000"
     }
 
-    tools {
-        sonarRunner 'sonar-scanner'
-    }
-
     stages {
 
         stage('Checkout Code') {
             steps {
-                echo "Cloning repository..."
                 git branch: 'main',
                     url: 'https://github.com/12gauri/devsecops-library-management-system.git'
             }
@@ -44,18 +39,12 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image..."
-
-                sh """
-                    docker build -t $IMAGE_NAME app/
-                """
+                sh "docker build -t $IMAGE_NAME app/"
             }
         }
 
         stage('Run Container Test') {
             steps {
-                echo "Running container..."
-
                 sh """
                     docker rm -f $CONTAINER_NAME || true
                     docker run -d --name $CONTAINER_NAME -p 8081:8080 $IMAGE_NAME
@@ -67,30 +56,14 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                echo "Running Trivy security scan..."
-
-                sh """
-                    trivy image $IMAGE_NAME
-                """
+                sh "trivy image $IMAGE_NAME"
             }
         }
     }
 
     post {
         always {
-            echo "Cleaning up container..."
-
-            sh """
-                docker rm -f $CONTAINER_NAME || true
-            """
-        }
-
-        success {
-            echo "Pipeline SUCCESS 🎉"
-        }
-
-        failure {
-            echo "Pipeline FAILED ❌ check logs"
+            sh "docker rm -f $CONTAINER_NAME || true"
         }
     }
 }
