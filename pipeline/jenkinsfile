@@ -1,51 +1,76 @@
 pipeline {
     agent any
-    
+
+    options {
+        skipDefaultCheckout(true)
+    }
+
+    environment {
+        IMAGE_NAME = "library-devsecops-app"
+        CONTAINER_NAME = "library-test-container"
+    }
+
     stages {
+
         stage('Checkout Code') {
             steps {
-                echo 'Cloning repository from main branch...'
-                git branch: 'main', 
-                    credentialsId: 'git-credentials', 
-                    url: 'https://github.com'
+                echo "Cloning repository from GitHub..."
+
+                git branch: 'main',
+                    url: 'https://github.com/12gauri/devsecops-library-management-system.git',
+                    credentialsId: 'git-credentials'
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image...'
-                sh 'docker build -t library-app ./app'
+                echo "Building Docker image..."
+
+                sh """
+                    docker build -t $IMAGE_NAME .
+                """
             }
         }
-        
+
         stage('Run Container Test') {
             steps {
-                echo 'Running container test...'
-                // Named 'library-test-container' for easy tracking and post-build cleanup
-                sh 'docker run -d --name library-test-container -p 5000:5000 library-app'
+                echo "Running Docker container..."
+
+                sh """
+                    docker rm -f $CONTAINER_NAME || true
+                    docker run -d --name $CONTAINER_NAME -p 8081:8080 $IMAGE_NAME
+                    sleep 10
+                    docker ps
+                """
             }
         }
-        
+
         stage('Trivy Scan (Security)') {
             steps {
-                echo 'Running security scan via Trivy Docker container...'
-                // Uses official Trivy image and mounts the docker socket to scan the local image
-                sh '''
-                    docker run --rm \
-                        -v /var/run/docker.sock:/var/run/docker.sock \
-                        -v $HOME/.cache:/root/.cache/ \
-                        aquasec/trivy:latest image library-app
-                '''
+                echo "Running Trivy security scan..."
+
+                sh """
+                    trivy image $IMAGE_NAME
+                """
             }
         }
     }
-    
+
     post {
         always {
-            echo 'Cleaning up test containers...'
-            // Force removes the test container so port 5000 is open for the next run
-            sh 'docker rm -f library-test-container || true'
-            echo 'Pipeline execution completed'
+            echo "Cleaning up test containers..."
+
+            sh """
+                docker rm -f $CONTAINER_NAME || true
+            """
+        }
+
+        success {
+            echo "Pipeline executed successfully 🎉"
+        }
+
+        failure {
+            echo "Pipeline failed ❌ Check logs"
         }
     }
 }
