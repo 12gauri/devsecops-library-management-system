@@ -57,6 +57,18 @@ pipeline {
     }
 }
     }
+stage('SonarQube Scan') {
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh """
+                sonar-scanner \
+                -Dsonar.projectKey=library-app \
+                -Dsonar.sources=. \
+                -Dsonar.host.url=http://localhost:9000
+            """
+        }
+    }
+}
 
     post {
         always {
