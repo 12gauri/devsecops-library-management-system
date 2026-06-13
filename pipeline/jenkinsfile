@@ -23,9 +23,9 @@ pipeline {
         }
 
         stage('SonarQube Scan') {
-            // Injects the global tool you created into this stage's PATH
             tools {
-                sonarQubeScanner 'sonar-scanner'
+                // Changed from sonarQubeScanner to sonarRunner
+                sonarRunner 'sonar-scanner'
             }
             steps {
                 echo "Running SonarQube Analysis..."
