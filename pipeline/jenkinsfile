@@ -22,15 +22,28 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-    steps {
-        echo "Building Docker image from app folder..."
+        stage('SonarQube Scan') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        sonar-scanner \
+                        -Dsonar.projectKey=library-app \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://localhost:9000
+                    """
+                }
+            }
+        }
 
-        sh """
-            docker build -t $IMAGE_NAME app/
-        """
-    }
-}
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image from app folder..."
+
+                sh """
+                    docker build -t $IMAGE_NAME app/
+                """
+            }
+        }
 
         stage('Run Container Test') {
             steps {
@@ -46,29 +59,17 @@ pipeline {
         }
 
         stage('Trivy Scan (Security)') {
-    steps {
-        echo "Running Trivy scan using Docker..."
+            steps {
+                echo "Running Trivy scan using Docker..."
 
-        sh """
-            docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:latest image library-devsecops-app
-        """
-    }
-}
-    }
-stage('SonarQube Scan') {
-    steps {
-        withSonarQubeEnv('SonarQube') {
-            sh """
-                sonar-scanner \
-                -Dsonar.projectKey=library-app \
-                -Dsonar.sources=. \
-                -Dsonar.host.url=http://localhost:9000
-            """
+                sh """
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image library-devsecops-app
+                """
+            }
         }
     }
-}
 
     post {
         always {
