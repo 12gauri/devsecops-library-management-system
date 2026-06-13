@@ -1,14 +1,15 @@
 pipeline {
     agent any
     
-    stages {
-        stage('Checkout Code') {
-            steps {
-                echo 'Cloning repository...'
-                checkout git(url: 'https://github.com/12gauri/devsecops-library-management-system.git', 
-                            credentialsId: 'git-credentials')
-            }
-        }
+    stage('Checkout Code') {
+    steps {
+        echo 'Cloning repository...'
+        git branch: 'main', 
+            credentialsId: 'git-credentials', 
+            url: 'https://github.com/12gauri/devsecops-library-management-system.git'
+    }
+}
+
         
         stage('Build Docker Image') {
             steps {
