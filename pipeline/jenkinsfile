@@ -23,6 +23,10 @@ pipeline {
         }
 
         stage('SonarQube Scan') {
+            // Injects the global tool you created into this stage's PATH
+            tools {
+                sonarQubeScanner 'sonar-scanner'
+            }
             steps {
                 echo "Running SonarQube Analysis..."
 
@@ -31,8 +35,7 @@ pipeline {
                         sonar-scanner \
                         -Dsonar.projectKey=library-app \
                         -Dsonar.projectName=Library-App \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=http://localhost:9000
+                        -Dsonar.sources=.
                     """
                 }
             }
