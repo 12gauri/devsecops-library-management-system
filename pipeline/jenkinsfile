@@ -3,24 +3,26 @@ pipeline {
 
     options {
         skipDefaultCheckout(true)
+        timestamps()
     }
 
     environment {
         IMAGE_NAME = "library-devsecops-app"
         CONTAINER_NAME = "library-test-container"
-        // This resolves the exact installation path of your global tool
-        SCANNER_HOME = tool type: 'hudson.plugins.sonar.SonarRunnerInstallation', name: 'sonar-scanner'
+        SONAR_HOST_URL = "http://sonarqube:9000"
+    }
+
+    tools {
+        sonarRunner 'sonar-scanner'
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                echo "Cloning repository from GitHub..."
-
+                echo "Cloning repository..."
                 git branch: 'main',
-                    url: 'https://github.com/12gauri/devsecops-library-management-system.git',
-                    credentialsId: 'git-credentials'
+                    url: 'https://github.com/12gauri/devsecops-library-management-system.git'
             }
         }
 
@@ -29,12 +31,12 @@ pipeline {
                 echo "Running SonarQube Analysis..."
 
                 withSonarQubeEnv('SonarQube') {
-                    // We run the scanner directly using its resolved bin path
                     sh """
-                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        sonar-scanner \
                         -Dsonar.projectKey=library-app \
                         -Dsonar.projectName=Library-App \
-                        -Dsonar.sources=.
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL}
                     """
                 }
             }
@@ -52,7 +54,7 @@ pipeline {
 
         stage('Run Container Test') {
             steps {
-                echo "Running Docker container..."
+                echo "Running container..."
 
                 sh """
                     docker rm -f $CONTAINER_NAME || true
@@ -63,7 +65,7 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan (Security)') {
+        stage('Trivy Scan') {
             steps {
                 echo "Running Trivy security scan..."
 
@@ -76,7 +78,7 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning up containers..."
+            echo "Cleaning up container..."
 
             sh """
                 docker rm -f $CONTAINER_NAME || true
@@ -84,11 +86,11 @@ pipeline {
         }
 
         success {
-            echo "Pipeline executed successfully 🎉"
+            echo "Pipeline SUCCESS 🎉"
         }
 
         failure {
-            echo "Pipeline failed ❌ Check logs"
+            echo "Pipeline FAILED ❌ check logs"
         }
     }
 }
