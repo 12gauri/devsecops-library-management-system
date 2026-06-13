@@ -4,10 +4,10 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Cloning repository...'
+                echo 'Cloning repository from main branch...'
                 git branch: 'main', 
                     credentialsId: 'git-credentials', 
-                    url: 'https://github.com/12gauri/devsecops-library-management-system.git'
+                    url: 'https://github.com'
             }
         }
         
@@ -20,19 +20,21 @@ pipeline {
         
         stage('Run Container Test') {
             steps {
-                echo 'Running container...'
-                // Named the container 'library-test-container' for easy cleanup later
+                echo 'Running container test...'
+                // Named 'library-test-container' for easy tracking and post-build cleanup
                 sh 'docker run -d --name library-test-container -p 5000:5000 library-app'
             }
         }
         
         stage('Trivy Scan (Security)') {
             steps {
-                echo 'Running security scan...'
+                echo 'Running security scan via Trivy Docker container...'
+                // Uses official Trivy image and mounts the docker socket to scan the local image
                 sh '''
-                    docker save library-app -o library-app.tar
-                    trivy image --input library-app.tar
-                    rm library-app.tar
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v $HOME/.cache:/root/.cache/ \
+                        aquasec/trivy:latest image library-app
                 '''
             }
         }
@@ -41,7 +43,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up test containers...'
-            // Stops and removes the container regardless of whether the pipeline succeeds or fails
+            // Force removes the test container so port 5000 is open for the next run
             sh 'docker rm -f library-test-container || true'
             echo 'Pipeline execution completed'
         }
