@@ -24,10 +24,13 @@ pipeline {
 
         stage('SonarQube Scan') {
             steps {
+                echo "Running SonarQube Analysis..."
+
                 withSonarQubeEnv('SonarQube') {
                     sh """
                         sonar-scanner \
                         -Dsonar.projectKey=library-app \
+                        -Dsonar.projectName=Library-App \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=http://localhost:9000
                     """
@@ -37,7 +40,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image from app folder..."
+                echo "Building Docker image..."
 
                 sh """
                     docker build -t $IMAGE_NAME app/
@@ -60,12 +63,10 @@ pipeline {
 
         stage('Trivy Scan (Security)') {
             steps {
-                echo "Running Trivy scan using Docker..."
+                echo "Running Trivy security scan..."
 
                 sh """
-                    docker run --rm \
-                    -v /var/run/docker.sock:/var/run/docker.sock \
-                    aquasec/trivy:latest image library-devsecops-app
+                    trivy image $IMAGE_NAME
                 """
             }
         }
@@ -73,7 +74,7 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning up test containers..."
+            echo "Cleaning up containers..."
 
             sh """
                 docker rm -f $CONTAINER_NAME || true
