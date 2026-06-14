@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Library DevSecOps Dashboard</title>
+
+<style>
+body { margin:0; font-family:Arial; background:#0b1220; color:white; }
+.sidebar { width:220px; height:100vh; background:#111827; position:fixed; padding:20px; }
+.main { margin-left:240px; padding:20px; }
+.card { background:#1f2937; padding:15px; margin-bottom:15px; border-radius:10px; }
+button { background:#38bdf8; padding:8px; border:none; border-radius:5px; cursor:pointer; }
+input { padding:8px; margin-top:5px; width:70%; }
+pre { background:#000; padding:10px; }
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+<h2>📚 Library</h2>
+<p>DevSecOps Vulnerable App</p>
+<p>⚠ For SAST Demo Only</p>
+</div>
+
+<div class="main">
+
+<h1>Library Dashboard</h1>
+
+<div class="card">
+<h3>Books</h3>
+<button onclick="loadBooks()">Load</button>
+<pre id="books"></pre>
+</div>
+
+<div class="card">
+<h3>Search</h3>
+<input id="searchBox">
+<button onclick="searchBook()">Search</button>
+<pre id="result"></pre>
+</div>
+
+<div class="card">
+<h3>Add Book</h3>
+<input id="title"><br>
+<input id="author"><br>
+<button onclick="addBook()">Add</button>
+<pre id="addResult"></pre>
+</div>
+
+<div class="card">
+<h3>Borrow</h3>
+<input id="borrowId"><br>
+<input id="user"><br>
+<button onclick="borrowBook()">Borrow</button>
+<pre id="borrowResult"></pre>
+</div>
+
+<div class="card">
+<h3>Return</h3>
+<input id="returnId"><br>
+<button onclick="returnBook()">Return</button>
+<pre id="returnResult"></pre>
+</div>
+
+<div class="card">
+<h3>Admin</h3>
+<input id="token">
+<button onclick="checkAdmin()">Check</button>
+<pre id="adminResult"></pre>
+</div>
+
+</div>
+
+<script>
+
+const API = window.location.origin;
+
+/* LOAD */
+async function loadBooks(){
+ let res = await fetch(API+"/books");
+ let data = await res.json();
+ document.getElementById("books").innerText = JSON.stringify(data.data,null,2);
+}
+
+/* SEARCH */
+async function searchBook(){
+ let q=document.getElementById("searchBox").value;
+ let res=await fetch(API+"/search?q="+q);
+ let data=await res.json();
+ document.getElementById("result").innerText=JSON.stringify(data.data,null,2);
+}
+
+/* ADD */
+async function addBook(){
+ let title=document.getElementById("title").value;
+ let author=document.getElementById("author").value;
+
+ let res=await fetch(API+"/books",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({title,author})
+ });
+
+ let data=await res.json();
+ document.getElementById("addResult").innerText=JSON.stringify(data,null,2);
+}
+
+/* BORROW */
+async function borrowBook(){
+ let id=document.getElementById("borrowId").value;
+ let user=document.getElementById("user").value;
+
+ let res=await fetch(API+"/borrow/"+id+"?user="+user,{method:"POST"});
+ let data=await res.json();
+ document.getElementById("borrowResult").innerText=JSON.stringify(data,null,2);
+}
+
+/* RETURN */
+async function returnBook(){
+ let id=document.getElementById("returnId").value;
+
+ let res=await fetch(API+"/return/"+id,{method:"POST"});
+ let data=await res.json();
+ document.getElementById("returnResult").innerText=JSON.stringify(data,null,2);
+}
+
+/* ADMIN */
+async function checkAdmin(){
+ let token=document.getElementById("token").value;
+ let res=await fetch(API+"/admin?token="+token);
+ let data=await res.json();
+ document.getElementById("adminResult").innerText=JSON.stringify(data,null,2);
+}
+
+loadBooks();
+
+</script>
+
+</body>
+</html>
