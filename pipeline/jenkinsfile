@@ -9,8 +9,9 @@ pipeline {
     environment {
         IMAGE_NAME = "library-devsecops-app"
         CONTAINER_NAME = "library-test-container"
+
+        // FIXED: NO trailing space
         SONAR_HOST_URL = "http://172.21.238.112:9000"
-        SONAR_SCANNER_HOME = tool 'SonarScanner'
     }
 
     stages {
@@ -28,7 +29,7 @@ pipeline {
 
                 withSonarQubeEnv('SonarQube') {
                     sh """
-                        $SONAR_SCANNER_HOME/bin/sonar-scanner \
+                        ${tool 'SonarScanner'}/bin/sonar-scanner \
                         -Dsonar.projectKey=library-app \
                         -Dsonar.projectName=Library-App \
                         -Dsonar.sources=. \
@@ -42,7 +43,7 @@ pipeline {
             steps {
                 echo "Checking SonarQube Quality Gate..."
 
-                timeout(time: 2, unit: 'MINUTES') {
+                timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -60,7 +61,7 @@ pipeline {
                 echo "Running Container..."
 
                 sh """
-                    docker rm -f $CONTAINER_NAME 2>/dev/null || true
+                    docker rm -f $CONTAINER_NAME || true
                     docker run -d --name $CONTAINER_NAME -p 8081:8080 $IMAGE_NAME
                     sleep 10
                     docker ps
@@ -72,9 +73,8 @@ pipeline {
             steps {
                 echo "Running Trivy Security Scan..."
 
-                sh """
-                    trivy image --severity HIGH,CRITICAL --no-progress $IMAGE_NAME || true
-                """
+                // safer + avoids pipeline break
+                sh "trivy image $IMAGE_NAME || true"
             }
         }
     }
@@ -82,7 +82,7 @@ pipeline {
     post {
         always {
             echo "Cleaning up container..."
-            sh "docker rm -f $CONTAINER_NAME 2>/dev/null || true"
+            sh "docker rm -f $CONTAINER_NAME || true"
         }
 
         success {
