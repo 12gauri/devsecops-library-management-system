@@ -3,12 +3,15 @@ pipeline {
 
     options {
         timestamps()
+        skipDefaultCheckout(true)
     }
 
     environment {
         IMAGE_NAME = "library-devsecops-app"
         CONTAINER_NAME = "library-test-container"
-        SONAR_HOST_URL = "http://localhost:9000"
+
+        // IMPORTANT: use your working SonarQube IP (change if needed)
+        SONAR_HOST_URL = "http://172.21.238.112:9000"
     }
 
     stages {
@@ -16,7 +19,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                url: 'https://github.com/12gauri/devsecops-library-management-system.git'
+                    url: 'https://github.com/12gauri/devsecops-library-management-system.git'
             }
         }
 
@@ -45,7 +48,7 @@ pipeline {
 
         stage('Run Container Test') {
             steps {
-                echo "Running container test..."
+                echo "Running Container..."
                 sh """
                     docker rm -f $CONTAINER_NAME || true
                     docker run -d --name $CONTAINER_NAME -p 8081:8080 $IMAGE_NAME
@@ -57,7 +60,7 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                echo "Running Trivy scan..."
+                echo "Running Trivy Security Scan..."
                 sh "trivy image $IMAGE_NAME || true"
             }
         }
@@ -70,11 +73,11 @@ pipeline {
         }
 
         success {
-            echo "Pipeline executed successfully 🎉"
+            echo "Pipeline SUCCESS 🎉"
         }
 
         failure {
-            echo "Pipeline failed ❌ check logs"
+            echo "Pipeline FAILED ❌ Check logs"
         }
     }
 }
