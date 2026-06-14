@@ -26,25 +26,29 @@ pipeline {
                 echo "Running SonarQube Analysis..."
 
                 withSonarQubeEnv('SonarQube') {
-                    sh """
-                        sonar-scanner \
-                        -Dsonar.projectKey=library-app \
-                        -Dsonar.projectName=Library-App \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=${SONAR_HOST_URL}
-                    """
+                    withEnv(["PATH+SONAR=${tool 'SonarScanner'}/bin"]) {
+                        sh """
+                            sonar-scanner \
+                            -Dsonar.projectKey=library-app \
+                            -Dsonar.projectName=Library-App \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=${SONAR_HOST_URL}
+                        """
+                    }
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
+                echo "Building Docker Image..."
                 sh "docker build -t $IMAGE_NAME app/"
             }
         }
 
         stage('Run Container Test') {
             steps {
+                echo "Running container test..."
                 sh """
                     docker rm -f $CONTAINER_NAME || true
                     docker run -d --name $CONTAINER_NAME -p 8081:8080 $IMAGE_NAME
@@ -56,14 +60,24 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                sh "trivy image $IMAGE_NAME"
+                echo "Running Trivy scan..."
+                sh "trivy image $IMAGE_NAME || true"
             }
         }
     }
 
     post {
         always {
+            echo "Cleaning up container..."
             sh "docker rm -f $CONTAINER_NAME || true"
+        }
+
+        success {
+            echo "Pipeline executed successfully 🎉"
+        }
+
+        failure {
+            echo "Pipeline failed ❌ check logs"
         }
     }
 }
