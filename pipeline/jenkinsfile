@@ -9,9 +9,8 @@ pipeline {
     environment {
         IMAGE_NAME = "library-devsecops-app"
         CONTAINER_NAME = "library-test-container"
-
-        // IMPORTANT: use your working SonarQube IP (change if needed)
         SONAR_HOST_URL = "http://172.21.238.112:9000"
+        SONAR_SCANNER_HOME = tool 'SonarScanner'
     }
 
     stages {
@@ -29,12 +28,22 @@ pipeline {
 
                 withSonarQubeEnv('SonarQube') {
                     sh """
-                        ${tool 'SonarScanner'}/bin/sonar-scanner \
+                        $SONAR_SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.projectKey=library-app \
                         -Dsonar.projectName=Library-App \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_HOST_URL}
                     """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                echo "Checking SonarQube Quality Gate..."
+
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -49,8 +58,9 @@ pipeline {
         stage('Run Container Test') {
             steps {
                 echo "Running Container..."
+
                 sh """
-                    docker rm -f $CONTAINER_NAME || true
+                    docker rm -f $CONTAINER_NAME 2>/dev/null || true
                     docker run -d --name $CONTAINER_NAME -p 8081:8080 $IMAGE_NAME
                     sleep 10
                     docker ps
@@ -61,7 +71,10 @@ pipeline {
         stage('Trivy Scan') {
             steps {
                 echo "Running Trivy Security Scan..."
-                sh "trivy image $IMAGE_NAME || true"
+
+                sh """
+                    trivy image --severity HIGH,CRITICAL --no-progress $IMAGE_NAME || true
+                """
             }
         }
     }
@@ -69,7 +82,7 @@ pipeline {
     post {
         always {
             echo "Cleaning up container..."
-            sh "docker rm -f $CONTAINER_NAME || true"
+            sh "docker rm -f $CONTAINER_NAME 2>/dev/null || true"
         }
 
         success {
